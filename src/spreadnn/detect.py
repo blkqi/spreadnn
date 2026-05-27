@@ -82,7 +82,7 @@ def detect(
 
     for pair in _pairwise(interior):
         if len(pair) == 1:
-            log.debug("lone tail: %s", pair[0].name)
+            log.debug("lone tail: %s", pair[0])
             continue
 
         name_e, name_o = pair
