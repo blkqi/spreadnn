@@ -40,14 +40,7 @@ def detect_spreads(
     threshold: float = 0.5,
     model_path: str | Path | None = None,
 ) -> list[tuple[int, int]]:
-    """Detect spreads and return ``[(start, end), ...]`` tuples.
-
-    Maps directly to ``volume.spreads`` in nmanga's orchestrator::
-
-        volume.spreads = detect_spreads("./images/")
-
-    The CLI wraps this into strings for ``-s A-B`` args.
-    """
+    """Detect spreads and return ``[(start, end), ...]`` tuples."""
     results = detect(directory, skip_pages=skip_pages, threshold=threshold, model_path=model_path)
     return [
         (extract_page_num(Path(r.even)) or 0, extract_page_num(Path(r.odd)) or 0)

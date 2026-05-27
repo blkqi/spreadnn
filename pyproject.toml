@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "spreadnn"
 version = "0.1.0"
-description = "CNN-based spread detection for nmanga pipelines"
+description = "CNN-based manga spread detection"
 requires-python = ">=3.10"
 license = { text = "ISC" }
 authors = [{ name = "Cory" }]

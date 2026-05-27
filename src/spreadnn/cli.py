@@ -14,7 +14,7 @@ from ._version import __version__
 log = logging.getLogger("spreadnn")
 
 # --------------------------------------------------------------------------- #
-# Shared CLI options (nmanga-style module-level constants)
+# Shared CLI options
 # --------------------------------------------------------------------------- #
 
 skip_pages = click.option(

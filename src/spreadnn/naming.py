@@ -29,5 +29,5 @@ def page_num(path: Path) -> int:
 
 
 def pair_str(a: int, b: int) -> str:
-    """Format page numbers as nmanga-compatible ``"A-B"``."""
+    """Format page numbers as ``"A-B"`` pair strings."""
     return f"{a}-{b}"
