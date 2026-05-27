@@ -52,7 +52,7 @@ verbose = click.option(
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version")
 def cli() -> None:
-    """spreadnn — CNN-based spread detection for nmanga."""
+    """spreadnn — CNN-based manga spread detection."""
 
 
 # --------------------------------------------------------------------------- #
@@ -78,11 +78,6 @@ def detect(
     Outputs a JSON array of ``[start, end]`` pairs to stdout::
 
         [[7, 8], [17, 18]]
-
-    Pipe into nmanga::
-
-        nmanga spreads join ./images/ \
-          $(spreadnn detect ./images/ | jq -r '.[] | "-s \(.[0])-\(.[1])"')
     """
     from .detect import detect_spreads
 
