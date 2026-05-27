@@ -36,12 +36,17 @@ class DetectionResult:
 def detect_spreads(
     directory: str | Path,
     *,
-    skip_pages: int = 1,
     threshold: float = 0.5,
     model_path: str | Path | None = None,
 ) -> list[tuple[int, int]]:
-    """Detect spreads and return ``[(start, end), ...]`` tuples."""
-    results = detect(directory, skip_pages=skip_pages, threshold=threshold, model_path=model_path)
+    """Detect spreads and return ``[(start, end), ...]`` tuples.
+
+    Alignment is auto-detected: starts at offset 1 (skipping the first
+    page), falls back to offset 0 if no spreads are found.  Misaligned
+    pairs reliably score below threshold, so a zero-spread result at the
+    wrong offset is a safe signal to retry.
+    """
+    results = detect(directory, threshold=threshold, model_path=model_path)
     return [
         (extract_page_num(Path(r.even)) or 0, extract_page_num(Path(r.odd)) or 0)
         for r in results
@@ -52,26 +57,47 @@ def detect_spreads(
 def detect(
     directory: str | Path,
     *,
-    skip_pages: int = 1,
     threshold: float = 0.5,
     model_path: str | Path | None = None,
 ) -> list[DetectionResult]:
     """Analyse page images in *directory* and return results for every pair.
 
-    Files are sorted lexicographically then walked in consecutive pairs.
-    The first ``skip_pages`` files are passed through without scoring.
+    Alignment is auto-detected: starts at offset 1 (skipping the first
+    page, the common single-cover case), falls back to offset 0 if no
+    spreads are found.
     """
     images = _collect_images(Path(directory))
     if not images:
         raise ValueError(f"no supported images found in {directory}")
 
     model = SpreadModel(model_path)
-    results: list[DetectionResult] = []
 
-    skip = min(skip_pages, len(images))
-    for img in images[:skip]:
-        log.debug("skip (passthrough): %s", img.name)
-    interior = images[skip:]
+    # Try offset 1 first (skip first page — most volumes have a single cover)
+    results = _detect_at_offset(directory, images, model, offset=1, threshold=threshold)
+    if any(r.merged for r in results):
+        log.info("alignment: offset 1 (first page skipped)")
+        return results
+
+    # Fall back to offset 0
+    results0 = _detect_at_offset(directory, images, model, offset=0, threshold=threshold)
+    if any(r0.merged for r0 in results0):
+        log.info("alignment: offset 0 (no pages skipped)")
+        return results0
+
+    log.info("no spreads detected at either offset")
+    return results
+
+
+def _detect_at_offset(
+    directory: str | Path,
+    images: list[Path],
+    model: SpreadModel,
+    offset: int,
+    threshold: float,
+) -> list[DetectionResult]:
+    """Pair images starting at *offset* and score each pair."""
+    interior = images[offset:]
+    results: list[DetectionResult] = []
 
     for pair in _pairwise(interior):
         if len(pair) == 1:

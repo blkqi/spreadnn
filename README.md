@@ -7,6 +7,10 @@ MobileNetV3-small binary classifier.  It operates on a flat directory of
 page images (pNNN files), outputs structured JSON, and optionally runs
 the ImageMagick join.
 
+Alignment is auto-detected: starts at offset 1 (skipping the first
+page, the common single-cover case), falls back to offset 0 if no
+spreads are found.
+
 **Not** a CBZ in/out tool — it works on loose leaf images.
 
 ## CLI
@@ -19,7 +23,6 @@ spreadnn join [OPTIONS] <DIR>
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--skip-pages N` | 1 | Passthrough leading N pages (covers, ToCs). |
 | `--threshold F` | 0.5 | Spread probability threshold [0–1]. |
 | `--model PATH` | bundled | Override model .pth file. |
 
@@ -32,7 +35,7 @@ Output a JSON array of `[start, end]` page-number pairs:
 ```
 
 ```bash
-spreadnn detect --skip-pages 0 ./images/
+spreadnn detect ./images/
 ```
 
 ### `manifest`
@@ -54,7 +57,7 @@ spreadnn manifest ./images/
 Detect + ImageMagick `+append` in one pass:
 
 ```bash
-spreadnn join --skip-pages 1 ./images/
+spreadnn join ./images/
 ```
 
 | Option | Default | Description |
@@ -91,7 +94,7 @@ extracted from matches for pair output.
 ```python
 from spreadnn.detect import detect_spreads
 
-pairs = detect_spreads("./images/", skip_pages=1)
+pairs = detect_spreads("./images/")
 # [(7, 8), (17, 18)]
 ```
 

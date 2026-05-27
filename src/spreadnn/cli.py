@@ -17,12 +17,6 @@ log = logging.getLogger("spreadnn")
 # Shared CLI options
 # --------------------------------------------------------------------------- #
 
-skip_pages = click.option(
-    "--skip-pages", "skip_pages",
-    type=int, default=1, show_default=True, metavar="N",
-    help="Number of leading pages to skip (covers, ToC).",
-)
-
 threshold = click.option(
     "--threshold", "threshold",
     type=click.FloatRange(0.0, 1.0),
@@ -62,18 +56,19 @@ def cli() -> None:
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@skip_pages
 @threshold
 @model_path
 @verbose
 def detect(
     directory: Path,
-    skip_pages: int,
     threshold: float,
     model_path: str | None,
     verbose: int,
 ) -> None:
     r"""Detect spread pairs in an image directory.
+
+    Alignment is auto-detected: starts at offset 1 (first page skipped),
+    falls back to offset 0 if no spreads are found.
 
     Outputs a JSON array of ``[start, end]`` pairs to stdout::
 
@@ -84,7 +79,7 @@ def detect(
     _configure_logging(verbose)
 
     try:
-        pairs = detect_spreads(directory, skip_pages=skip_pages, threshold=threshold, model_path=model_path)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -99,7 +94,6 @@ def detect(
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@skip_pages
 @threshold
 @model_path
 @click.option("--output", "-o", "output_path", type=click.Path(path_type=Path), default=None, metavar="PATH",
@@ -108,7 +102,6 @@ def detect(
 @verbose
 def manifest(  # noqa: PLR0913
     directory: Path,
-    skip_pages: int,
     threshold: float,
     model_path: str | None,
     output_path: Path | None,
@@ -121,7 +114,7 @@ def manifest(  # noqa: PLR0913
     _configure_logging(verbose)
 
     try:
-        pairs = detect_spreads(directory, skip_pages=skip_pages, threshold=threshold, model_path=model_path)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -144,7 +137,6 @@ def manifest(  # noqa: PLR0913
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@skip_pages
 @threshold
 @model_path
 @click.option("--quality", "-q", "quality", type=click.IntRange(1, 100),
@@ -158,7 +150,6 @@ def manifest(  # noqa: PLR0913
 @verbose
 def join(  # noqa: PLR0913
     directory: Path,
-    skip_pages: int,
     threshold: float,
     model_path: str | None,
     quality: int,
@@ -174,7 +165,7 @@ def join(  # noqa: PLR0913
     _configure_logging(verbose)
 
     try:
-        results = _detect(directory, skip_pages=skip_pages, threshold=threshold, model_path=model_path)
+        results = _detect(directory, threshold=threshold, model_path=model_path)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
