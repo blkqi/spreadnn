@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spreadnn"
+version = "0.1.0"
+description = "CNN-based spread detection for nmanga pipelines"
+requires-python = ">=3.10"
+license = { text = "ISC" }
+authors = [{ name = "Cory" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: ISC License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy>=1.23",
+    "opencv-python>=4.6",
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "rich-click>=1.7",
+]
+
+[project.scripts]
+spreadnn = "spreadnn.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-user/spreadnn"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+spreadnn = ["models/*.pth"]
