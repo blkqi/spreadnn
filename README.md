@@ -69,15 +69,6 @@ spreadnn join ./images/
 | `--output-dir PATH` | `<DIR>` | Output directory. |
 | `--no-cleanup` | false | Keep originals of joined pages. |
 
-## Detection Algorithm
-
-1. Resize both pages to the same height (max of the two).
-2. Extract a 256×64 strip centred on the inner edge (32 px from each page).
-3. Normalise with ImageNet stats (mean=[0.485,0.456,0.406],
-   std=[0.229,0.224,0.225]).
-4. Run through MobileNetV3-small with binary classification head.
-5. Apply sigmoid → spread probability.
-
 ## Output Schema
 
 ```
