@@ -186,7 +186,7 @@ def join(  # noqa: PLR0913
     no_cleanup: bool,
     verbose: int,
 ) -> None:
-    """Detect spreads and join them via ImageMagick in one pass."""
+    """Detect spreads and join them in one pass."""
     from .detect import detect as _detect
     from .join import join_pairs
 

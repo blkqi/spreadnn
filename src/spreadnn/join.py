@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import subprocess as sp
 from pathlib import Path
+
+import cv2
 
 __all__ = (
     "join_pair",
@@ -15,26 +16,28 @@ def join_pair(
     output: Path,
     *,
     quality: int = 100,
-    magick_path: str = "magick",
 ) -> None:
-    """Join two images side-by-side using ImageMagick ``+append``.
+    """Join two images side-by-side using OpenCV."""
+    left_img = cv2.imread(str(left))
+    right_img = cv2.imread(str(right))
 
-    Equivalent to::
+    if left_img is None:
+        raise RuntimeError(f"failed to decode: {left}")
+    if right_img is None:
+        raise RuntimeError(f"failed to decode: {right}")
 
-        magick left.jpg right.jpg -quality 100% +append output.jpg
-    """
-    cmd = [
-        magick_path,
-        str(left),
-        str(right),
-        "-quality", f"{quality}.00%",
-        "+append",
-        str(output),
-    ]
-    try:
-        sp.run(cmd, check=True, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-    except sp.CalledProcessError as exc:
-        raise RuntimeError(f"ImageMagick join failed: {' '.join(cmd)}") from exc
+    h = max(left_img.shape[0], right_img.shape[0])
+    if left_img.shape[0] != h:
+        left_img = cv2.resize(left_img, (left_img.shape[1], h), interpolation=cv2.INTER_LINEAR)
+    if right_img.shape[0] != h:
+        right_img = cv2.resize(right_img, (right_img.shape[1], h), interpolation=cv2.INTER_LINEAR)
+
+    joined = cv2.hconcat([left_img, right_img])
+
+    params = [cv2.IMWRITE_JPEG_QUALITY, quality]
+    ok = cv2.imwrite(str(output), joined, params)
+    if not ok:
+        raise RuntimeError(f"failed to write: {output}")
 
 
 def join_pairs(
@@ -42,12 +45,11 @@ def join_pairs(
     pairs: list[tuple[Path, Path]],
     *,
     quality: int = 100,
-    magick_path: str = "magick",
     output_dir: Path | None = None,
     dry_run: bool = False,
     no_cleanup: bool = False,
 ) -> list[Path]:
-    """Join multiple image pairs via ImageMagick.
+    """Join multiple image pairs via OpenCV.
 
     Returns list of output paths that were written (empty if *dry_run*).
     """
@@ -63,7 +65,7 @@ def join_pairs(
         if dry_run:
             continue
 
-        join_pair(left, right, out_path, quality=quality, magick_path=magick_path)
+        join_pair(left, right, out_path, quality=quality)
         written.append(out_path)
 
         if not no_cleanup:

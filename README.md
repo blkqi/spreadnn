@@ -4,8 +4,8 @@
 
 `spreadnn` detects two-page spreads in manga dumps using a
 MobileNetV3-small binary classifier.  It operates on a flat directory of
-page images (pNNN files), outputs structured JSON, and optionally runs
-the ImageMagick join.
+page images (pNNN files), outputs structured JSON, and optionally joins
+spreads side-by-side.
 
 Defaults to manga (right-to-left) reading order.  Pass ``--ltr`` for
 western/flopped pages.  Pair alignment is auto-detected (offset 1
@@ -56,7 +56,7 @@ spreadnn manifest ./images/
 
 ### `join`
 
-Detect + ImageMagick `+append` in one pass:
+Detect + join in one pass:
 
 ```bash
 spreadnn join ./images/
