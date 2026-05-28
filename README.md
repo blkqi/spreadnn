@@ -4,9 +4,8 @@
 
 `spreadnn` detects two-page spreads in manga dumps using a
 MobileNetV3-small binary classifier.  It operates on a flat directory of
-page images (pNNN files), detects spreads, and writes a manifest that
-downstream tools can use to mechanically join spreads without
-re-encoding the source images.
+page images, detects spreads, and writes a manifest that downstream tools 
+can use to mechanically join spreads without re-encoding the source images.
 
 Defaults to manga (right-to-left) reading order.  Pass ``--reverse`` for
 western/flopped pages.  Pair alignment is auto-detected (offset 1
@@ -26,13 +25,13 @@ spreadnn join [OPTIONS] <DIR>
 Run ML detection on a directory of page images.  Outputs a JSON array of
 ``[left, right]`` filename pairs to stdout.  For RTL (default) the
 pairs are ``[even, odd]`` so joining left-to-right preserves narrative
-order::
+order:
 
 ```json
 [["p008.jpg", "p007.jpg"]]
 ```
 
-Useful for piping into downstream tools (nmanga, cbtools):
+Useful for piping into downstream tools:
 
 ```bash
 spreadnn detect ./images/
@@ -85,22 +84,16 @@ second on the right.  For RTL (default) the pair is ``(even_fn, odd_fn)``
 so reading left-to-right gives correct narrative order; with ``--reverse``
 it is ``(odd_fn, even_fn)``.
 
-## Naming Convention
-
-Page images should follow the ``p\d+`` convention (e.g. ``p007.jpg``)
-for compatibility with downstream tools like nmanga.  No filename regex
-is enforced internally — the manifest stores filenames directly.
-
 ## API
 
 ```python
 from spreadnn.detect import detect_spreads
 
 pairs = detect_spreads("./images/")
-# [("p008.jpg", "p007.jpg")]   (RTL default — even on left)
+# [("p008.jpg", "p007.jpg")]
 
-pairs = detect_spreads("./images/", reverse=True, offset=0)
-# [("p007.jpg", "p008.jpg")]   (reversed — odd on left)
+pairs = detect_spreads("./images/", reverse=True)
+# [("p007.jpg", "p008.jpg")]
 ```
 
 ```python
@@ -109,6 +102,8 @@ from spreadnn.manifest import load_manifest, dump_manifest
 manifest = load_manifest(Path("spreads.json"))
 # [("p008.jpg", "p007.jpg")]
 ```
+
+```python
 from spreadnn.model import SpreadModel
 
 model = SpreadModel()
@@ -128,7 +123,8 @@ prob = model.score_pair(right_img, left_img)
 ## Model
 
 Ships `manga-digital.pth` (MobileNetV3-small, binary classifier head)
-bundled at `spreadnn/models/manga-digital.pth`.
+bundled at `spreadnn/models/manga-digital.pth`. Trained on high quality
+digital manga rips only.
 
 ## Edge Cases
 
