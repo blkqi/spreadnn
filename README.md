@@ -77,10 +77,12 @@ spreadnn join ./images/
 
 Each inner array is `[first_page, next_page]` in reading order.
 
-## File Name Convention
+## Page Number Extraction
 
-Input filenames: `p(\d+)\.(jpg|jpeg|png|webp)`.  Page numbers are
-extracted from matches for pair output.
+For ``detect`` and ``manifest`` output, page numbers are extracted from
+filenames matching ``p(\d+)\.(jpg|jpeg|png|webp)`` (e.g. ``p007.jpg``).
+The ``join`` command ignores page numbers — output filenames are derived
+from the input stems.
 
 ## API
 
