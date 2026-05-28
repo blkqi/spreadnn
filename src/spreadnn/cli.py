@@ -31,6 +31,12 @@ model_path = click.option(
     help="Override bundled model .pth file.",
 )
 
+ltr_flag = click.option(
+    "--ltr", "ltr",
+    is_flag=True, default=False,
+    help="Left-to-right reading order (western/flopped). Default is RTL (manga).",
+)
+
 verbose = click.option(
     "-v", "--verbose", "verbose",
     count=True, default=0,
@@ -58,11 +64,13 @@ def cli() -> None:
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @threshold
 @model_path
+@ltr_flag
 @verbose
 def detect(
     directory: Path,
     threshold: float,
     model_path: str | None,
+    ltr: bool,
     verbose: int,
 ) -> None:
     r"""Detect spread pairs in an image directory.
@@ -79,7 +87,7 @@ def detect(
     _configure_logging(verbose)
 
     try:
-        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -96,6 +104,7 @@ def detect(
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @threshold
 @model_path
+@ltr_flag
 @click.option("--output", "-o", "output_path", type=click.Path(path_type=Path), default=None, metavar="PATH",
               help="Output path for manifest (default: <dir>/spreads.json).")
 @click.option("--no-write", is_flag=True, default=False, help="Print manifest to stdout instead.")
@@ -104,6 +113,7 @@ def manifest(  # noqa: PLR0913
     directory: Path,
     threshold: float,
     model_path: str | None,
+    ltr: bool,
     output_path: Path | None,
     no_write: bool,
     verbose: int,
@@ -114,7 +124,7 @@ def manifest(  # noqa: PLR0913
     _configure_logging(verbose)
 
     try:
-        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -139,6 +149,7 @@ def manifest(  # noqa: PLR0913
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @threshold
 @model_path
+@ltr_flag
 @click.option("--quality", "-q", "quality", type=click.IntRange(1, 100),
               default=100, show_default=True, help="JPEG quality for joined output.")
 @click.option("--output-dir", "output_dir", type=click.Path(path_type=Path), default=None, metavar="PATH",
@@ -152,6 +163,7 @@ def join(  # noqa: PLR0913
     directory: Path,
     threshold: float,
     model_path: str | None,
+    ltr: bool,
     quality: int,
     output_dir: Path | None,
     dry_run: bool,
@@ -165,7 +177,7 @@ def join(  # noqa: PLR0913
     _configure_logging(verbose)
 
     try:
-        results = _detect(directory, threshold=threshold, model_path=model_path)
+        results = _detect(directory, threshold=threshold, model_path=model_path, ltr=ltr)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -177,17 +189,18 @@ def join(  # noqa: PLR0913
 
     pairs: list[tuple[Path, Path]] = []
     for r in merged:
-        left = directory / r.even
-        right = directory / r.odd
+        left_name, right_name = (r.even, r.odd) if ltr else (r.odd, r.even)
+        left = directory / left_name
+        right = directory / right_name
         if not left.exists() or not right.exists():
             log.warning("missing file for pair %s / %s — skipping", r.even, r.odd)
             continue
         pairs.append((left, right))
 
     if dry_run:
-        log.info("dry-run: would join %d pair(s)", len(pairs))
-        for l, r in pairs:
-            log.info("  %s + %s", l.name, r.name)
+        log.info("dry-run: would join %d pair(s)", len(merged))
+        for r in merged:
+            log.info("  %s + %s", r.even, r.odd)
         return
 
     written = join_pairs(directory, pairs, quality=quality, output_dir=output_dir, no_cleanup=no_cleanup)

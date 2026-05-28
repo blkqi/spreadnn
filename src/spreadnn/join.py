@@ -56,7 +56,8 @@ def join_pairs(
     written: list[Path] = []
 
     for left, right in pairs:
-        out_name = f"{left.stem}-{right.stem}.jpg"
+        stems = sorted([left.stem, right.stem])
+        out_name = f"{stems[0]}-{stems[1]}.jpg"
         out_path = out_dir / out_name
 
         if dry_run:

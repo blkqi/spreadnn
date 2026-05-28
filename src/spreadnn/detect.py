@@ -38,6 +38,7 @@ def detect_spreads(
     *,
     threshold: float = 0.5,
     model_path: str | Path | None = None,
+    ltr: bool = False,
 ) -> list[tuple[int, int]]:
     """Detect spreads and return ``[(start, end), ...]`` tuples.
 
@@ -46,7 +47,7 @@ def detect_spreads(
     pairs reliably score below threshold, so a zero-spread result at the
     wrong offset is a safe signal to retry.
     """
-    results = detect(directory, threshold=threshold, model_path=model_path)
+    results = detect(directory, threshold=threshold, model_path=model_path, ltr=ltr)
     return [
         (extract_page_num(Path(r.even)) or 0, extract_page_num(Path(r.odd)) or 0)
         for r in results
@@ -59,6 +60,7 @@ def detect(
     *,
     threshold: float = 0.5,
     model_path: str | Path | None = None,
+    ltr: bool = False,
 ) -> list[DetectionResult]:
     """Analyse page images in *directory* and return results for every pair.
 
@@ -73,13 +75,13 @@ def detect(
     model = SpreadModel(model_path)
 
     # Try offset 1 first (skip first page — most volumes have a single cover)
-    results = _detect_at_offset(directory, images, model, offset=1, threshold=threshold)
+    results = _detect_at_offset(directory, images, model, offset=1, threshold=threshold, ltr=ltr)
     if any(r.merged for r in results):
         log.info("alignment: offset 1 (first page skipped)")
         return results
 
     # Fall back to offset 0
-    results0 = _detect_at_offset(directory, images, model, offset=0, threshold=threshold)
+    results0 = _detect_at_offset(directory, images, model, offset=0, threshold=threshold, ltr=ltr)
     if any(r0.merged for r0 in results0):
         log.info("alignment: offset 0 (no pages skipped)")
         return results0
@@ -94,6 +96,7 @@ def _detect_at_offset(
     model: SpreadModel,
     offset: int,
     threshold: float,
+    ltr: bool = False,
 ) -> list[DetectionResult]:
     """Pair images starting at *offset* and score each pair."""
     interior = images[offset:]
@@ -115,7 +118,7 @@ def _detect_at_offset(
             log.warning("decode failure: %s / %s", name_e, name_o)
             continue
 
-        prob = model.score_pair(img_e, img_o)
+        prob = model.score_pair(img_o, img_e) if ltr else model.score_pair(img_e, img_o)
         merged = prob >= threshold
         results.append(DetectionResult(
             even=name_e, odd=name_o, score=round(prob, 4), merged=merged,

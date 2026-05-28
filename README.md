@@ -82,7 +82,7 @@ spreadnn join ./images/
 [[7, 8], [17, 18]]
 ```
 
-Each inner array is `[left_page, right_page]` in reading order.
+Each inner array is `[first_page, next_page]` in reading order.
 
 ## File Name Convention
 
@@ -122,7 +122,6 @@ bundled at `spreadnn/models/manga-digital.pth`.
 
 ## Edge Cases
 
-- **Odd page count**: Final single page is not scored or joined.
 - **Decode failure**: Both halves emitted individually; pair omitted.
 - **Height mismatch**: Pages resized to `max(h_e, h_o)` before scoring.
 - **Non-sequential filenames**: Sorted lexicographically; pairs taken
