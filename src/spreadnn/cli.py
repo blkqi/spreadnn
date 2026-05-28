@@ -73,6 +73,10 @@ def cli() -> None:
 @model_path
 @ltr_flag
 @offset_opt
+@click.option("--manifest", "-m", "manifest", is_flag=True, default=False,
+              help="Write spreads.json sidecar instead of stdout.")
+@click.option("--output", "-o", "manifest_path", type=click.Path(path_type=Path), default=None, metavar="PATH",
+              help="Manifest output path (default: <dir>/spreads.json).")
 @verbose
 def detect(
     directory: Path,
@@ -80,19 +84,21 @@ def detect(
     model_path: str | None,
     ltr: bool,
     offset: str,
+    manifest: bool,
+    manifest_path: Path | None,
     verbose: int,
 ) -> None:
     r"""Detect spread pairs in an image directory.
 
-    Alignment is auto-detected: starts at offset 1 (first page skipped),
-    falls back to offset 0 if no spreads are found. Use ``--offset`` to
-    force a specific parity.
+    Outputs a JSON array of ``[left_fn, right_fn]`` pairs to stdout::
 
-    Outputs a JSON array of ``[start, end]`` pairs to stdout::
+        [["p008.jpg", "p007.jpg"]]
 
-        [[7, 8], [17, 18]]
+    Pass ``--manifest`` to write a spreads.json sidecar instead.
+    Both outputs use the same format.
     """
     from .detect import detect_spreads
+    from .manifest import dump_manifest
 
     _configure_logging(verbose)
 
@@ -103,55 +109,12 @@ def detect(
         log.error("%s", exc)
         raise SystemExit(1) from exc
 
-    click.echo(json.dumps(pairs))
-
-
-# --------------------------------------------------------------------------- #
-# manifest
-# --------------------------------------------------------------------------- #
-
-
-@cli.command()
-@click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@threshold
-@model_path
-@ltr_flag
-@offset_opt
-@click.option("--output", "-o", "output_path", type=click.Path(path_type=Path), default=None, metavar="PATH",
-              help="Output path for manifest (default: <dir>/spreads.json).")
-@click.option("--no-write", is_flag=True, default=False, help="Print manifest to stdout instead.")
-@verbose
-def manifest(  # noqa: PLR0913
-    directory: Path,
-    threshold: float,
-    model_path: str | None,
-    ltr: bool,
-    offset: str,
-    output_path: Path | None,
-    no_write: bool,
-    verbose: int,
-) -> None:
-    """Write a spreads.json sidecar into the image directory."""
-    from .detect import detect_spreads
-
-    _configure_logging(verbose)
-
-    try:
-        _offset = None if offset == "auto" else int(offset)
-        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=_offset)
-    except ValueError as exc:
-        log.error("%s", exc)
-        raise SystemExit(1) from exc
-
-    payload = json.dumps(pairs) + "\n"
-
-    if no_write:
-        click.echo(payload, nl=False)
-        return
-
-    out = output_path or (directory / "spreads.json")
-    out.write_text(payload)
-    log.info("wrote manifest: %s", out)
+    if manifest:
+        out = manifest_path or (directory / "spreads.json")
+        dump_manifest(pairs, out)
+        log.info("wrote manifest: %s", out)
+    else:
+        click.echo(json.dumps(pairs))
 
 
 # --------------------------------------------------------------------------- #
@@ -161,10 +124,9 @@ def manifest(  # noqa: PLR0913
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@threshold
-@model_path
-@ltr_flag
-@offset_opt
+@click.option("--manifest", "-m", "manifest_path", type=str,
+              default=None, metavar="PATH",
+              help="Path to spreads.json manifest (default: <dir>/spreads.json).  Use '-' for stdin.")
 @click.option("--quality", "-q", "quality", type=click.IntRange(1, 100),
               default=100, show_default=True, help="JPEG quality for joined output.")
 @click.option("--output-dir", "output_dir", type=click.Path(path_type=Path), default=None, metavar="PATH",
@@ -174,54 +136,51 @@ def manifest(  # noqa: PLR0913
 @click.option("--no-cleanup", is_flag=True, default=False,
               help="Keep original halves of joined pages.")
 @verbose
-def join(  # noqa: PLR0913
+def join(
     directory: Path,
-    threshold: float,
-    model_path: str | None,
-    ltr: bool,
-    offset: str,
+    manifest_path: str | None,
     quality: int,
     output_dir: Path | None,
     dry_run: bool,
     no_cleanup: bool,
     verbose: int,
 ) -> None:
-    """Detect spreads and join them in one pass."""
-    from .detect import detect as _detect
+    """Join spreads from a manifest.
+
+    Pass ``-`` to ``--manifest`` to read from stdin (pipe from ``spreadnn detect``).
+
+    Otherwise expects a ``spreads.json`` in *directory* or an explicit path.
+    """
     from .join import join_pairs
+    from .manifest import load_manifest, resolve_manifest_pairs
 
     _configure_logging(verbose)
 
-    try:
-        _offset = None if offset == "auto" else int(offset)
-        results = _detect(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=_offset)
-    except ValueError as exc:
-        log.error("%s", exc)
-        raise SystemExit(1) from exc
+    if manifest_path == "-":
+        manifest = load_manifest(sys.stdin.read())
+        log.info("using manifest from stdin")
+    else:
+        p = Path(manifest_path) if manifest_path else directory / "spreads.json"
+        if not p.exists():
+            log.error("no manifest found at %s — run 'spreadnn detect --manifest' first", p)
+            raise SystemExit(1)
+        log.info("using manifest: %s", p)
+        manifest = load_manifest(p)
 
-    merged = [r for r in results if r.merged]
-    if not merged:
-        log.info("no spreads detected — nothing to join")
+    named = resolve_manifest_pairs(directory, manifest)
+    if not named:
+        log.info("no valid pairs in manifest — nothing to join")
         return
 
-    pairs: list[tuple[Path, Path]] = []
-    for r in merged:
-        left_name, right_name = (r.even, r.odd) if ltr else (r.odd, r.even)
-        left = directory / left_name
-        right = directory / right_name
-        if not left.exists() or not right.exists():
-            log.warning("missing file for pair %s / %s — skipping", r.even, r.odd)
-            continue
-        pairs.append((left, right))
+    pairs = [(directory / a, directory / b) for a, b in named]
 
     if dry_run:
-        log.info("dry-run: would join %d pair(s)", len(merged))
-        for r in merged:
-            log.info("  %s + %s", r.even, r.odd)
+        log.info("dry-run: would join %d pair(s)", len(pairs))
+        for left, right in pairs:
+            log.info("  %s + %s", left.name, right.name)
         return
 
     written = join_pairs(directory, pairs, quality=quality, output_dir=output_dir, no_cleanup=no_cleanup)
-
     log.info("joined %d spread(s)", len(written))
     for w in written:
         log.info("  created: %s", w.name)

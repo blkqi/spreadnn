@@ -40,18 +40,20 @@ def detect_spreads(
     model_path: str | Path | None = None,
     ltr: bool = False,
     offset: int | None = None,
-) -> list[tuple[int, int]]:
-    """Detect spreads and return ``[(start, end), ...]`` tuples.
+) -> list[tuple[str, str]]:
+    """Detect spreads and return ``[(left_fn, right_fn), ...]``.
 
-    *offset* can be *0* or *1* to force a specific parity, or *None* to
-    auto-detect (tries offset 1 first, falls back to 0).
+    Pairs are in joined output order — the first filename goes on the
+    left side of the joined image, the second on the right.  For RTL
+    (default) the pair is ``(odd_fn, even_fn)`` in sort order, which
+    becomes ``(even_fn, odd_fn)`` after the reading-order swap so that
+    a left-to-right scan gives correct narrative order.
     """
     results = detect(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=offset)
-    return [
-        (extract_page_num(Path(r.even)) or 0, extract_page_num(Path(r.odd)) or 0)
-        for r in results
-        if r.merged
-    ]
+    pairs = [(r.even, r.odd) for r in results if r.merged]
+    if not ltr:
+        pairs = [(b, a) for a, b in pairs]
+    return pairs
 
 
 def detect(

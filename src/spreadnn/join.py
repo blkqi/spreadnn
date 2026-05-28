@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import cv2
+
+log = logging.getLogger(__name__)
 
 __all__ = (
     "join_pair",
