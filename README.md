@@ -4,8 +4,9 @@
 
 `spreadnn` detects two-page spreads in manga dumps using a
 MobileNetV3-small binary classifier.  It operates on a flat directory of
-page images (pNNN files), outputs structured JSON, and optionally joins
-spreads side-by-side.
+page images (pNNN files), detects spreads, and writes a manifest that
+downstream tools can use to mechanically join spreads without
+re-encoding the source images.
 
 Defaults to manga (right-to-left) reading order.  Pass ``--ltr`` for
 western/flopped pages.  Pair alignment is auto-detected (offset 1
@@ -17,7 +18,6 @@ first, fallback to 0), or pin it with ``--offset {0,1}``.
 
 ```
 spreadnn detect [OPTIONS] <DIR>
-spreadnn manifest [OPTIONS] <DIR>
 spreadnn join [OPTIONS] <DIR>
 ```
 
@@ -30,59 +30,68 @@ spreadnn join [OPTIONS] <DIR>
 
 ### `detect`
 
-Output a JSON array of `[start, end]` page-number pairs:
+Run ML detection on a directory of page images.  Outputs a JSON array of
+``[left, right]`` pairs to stdout.  For RTL (default) the pairs are
+``[even, odd]`` so joining left-to-right preserves narrative order::
 
 ```json
-[[7, 8], [17, 18]]
+[[8, 7], [18, 17]]
 ```
+
+Useful for piping into downstream tools (nmanga, cbtools):
 
 ```bash
 spreadnn detect ./images/
 ```
 
-### `manifest`
-
-Write a `spreads.json` sidecar into the image directory:
+Pass ``--manifest`` to write a ``spreads.json`` sidecar instead.
+The sidecar uses the same format as stdout:
 
 ```bash
-spreadnn manifest ./images/
+spreadnn detect ./images/ --manifest
 # → ./images/spreads.json
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--output PATH` | `<DIR>/spreads.json` | Output path for manifest. |
-| `--no-write` | false | Print manifest to stdout instead. |
+| `--manifest` | off | Write spreads.json sidecar instead of stdout. |
+| `--output PATH` | `<DIR>/spreads.json` | Manifest output path. |
 
 ### `join`
 
-Detect + join in one pass:
+Mechanically join spread pairs from a manifest.  Requires a
+``spreads.json`` in the directory (or pass ``--manifest``).  Does not
+run ML detection — run ``spreadnn detect --manifest`` first:
 
 ```bash
-spreadnn join ./images/
+spreadnn detect --manifest ./images/ && spreadnn join ./images/
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--manifest PATH` | `<DIR>/spreads.json` | Path to manifest. |
 | `--dry-run` | false | Print what would be joined, don't write. |
 | `--quality N` | 100 | JPEG quality for joined output. |
 | `--output-dir PATH` | `<DIR>` | Output directory. |
 | `--no-cleanup` | false | Keep originals of joined pages. |
 
-## Output Schema
+## Manifest Schema
 
 ```
-[[7, 8], [17, 18]]
+[["p008.jpg", "p007.jpg"], ["p018.jpg", "p017.jpg"]]
 ```
 
-Each inner array is `[first_page, next_page]` in reading order.
+Each inner array is ``[left_filename, right_filename]`` in joined output
+order — the first file goes on the left side of the joined image, the
+second on the right.  For RTL (default) the pair is ``(even_fn, odd_fn)``
+so reading left-to-right gives correct narrative order; for LTR it is
+``(odd_fn, even_fn)``.
 
-## Page Number Extraction
+## Naming Convention
 
-For ``detect`` and ``manifest`` output, page numbers are extracted from
-filenames matching ``p(\d+)\.(jpg|jpeg|png|webp)`` (e.g. ``p007.jpg``).
-The ``join`` command ignores page numbers — output filenames are derived
-from the input stems.
+Page images should follow the ``p\d+`` convention (e.g. ``p007.jpg``)
+for compatibility with downstream tools like nmanga.  No filename regex
+is enforced internally — the manifest stores filenames directly.
 
 ## API
 
@@ -90,13 +99,18 @@ from the input stems.
 from spreadnn.detect import detect_spreads
 
 pairs = detect_spreads("./images/")
-# [(7, 8), (17, 18)]
+# [("p008.jpg", "p007.jpg")]   (RTL default — even on left)
 
 pairs = detect_spreads("./images/", ltr=True, offset=0)
-# western pages, offset 0 (no page skipped)
+# [("p007.jpg", "p008.jpg")]   (LTR — odd on left)
 ```
 
 ```python
+from spreadnn.manifest import load_manifest, dump_manifest
+
+manifest = load_manifest(Path("spreads.json"))
+# [("p008.jpg", "p007.jpg")]
+```
 from spreadnn.model import SpreadModel
 
 model = SpreadModel()
