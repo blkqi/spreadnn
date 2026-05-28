@@ -37,6 +37,13 @@ ltr_flag = click.option(
     help="Left-to-right reading order (western/flopped). Default is RTL (manga).",
 )
 
+offset_opt = click.option(
+    "--offset", "offset",
+    type=click.Choice(["0", "1", "auto"]),
+    default="auto", show_default=True,
+    help="Pair alignment offset. 'auto' tries offset 1 first, falls back to 0.",
+)
+
 verbose = click.option(
     "-v", "--verbose", "verbose",
     count=True, default=0,
@@ -65,18 +72,21 @@ def cli() -> None:
 @threshold
 @model_path
 @ltr_flag
+@offset_opt
 @verbose
 def detect(
     directory: Path,
     threshold: float,
     model_path: str | None,
     ltr: bool,
+    offset: str,
     verbose: int,
 ) -> None:
     r"""Detect spread pairs in an image directory.
 
     Alignment is auto-detected: starts at offset 1 (first page skipped),
-    falls back to offset 0 if no spreads are found.
+    falls back to offset 0 if no spreads are found. Use ``--offset`` to
+    force a specific parity.
 
     Outputs a JSON array of ``[start, end]`` pairs to stdout::
 
@@ -87,7 +97,8 @@ def detect(
     _configure_logging(verbose)
 
     try:
-        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr)
+        _offset = None if offset == "auto" else int(offset)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=_offset)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -105,6 +116,7 @@ def detect(
 @threshold
 @model_path
 @ltr_flag
+@offset_opt
 @click.option("--output", "-o", "output_path", type=click.Path(path_type=Path), default=None, metavar="PATH",
               help="Output path for manifest (default: <dir>/spreads.json).")
 @click.option("--no-write", is_flag=True, default=False, help="Print manifest to stdout instead.")
@@ -114,6 +126,7 @@ def manifest(  # noqa: PLR0913
     threshold: float,
     model_path: str | None,
     ltr: bool,
+    offset: str,
     output_path: Path | None,
     no_write: bool,
     verbose: int,
@@ -124,7 +137,8 @@ def manifest(  # noqa: PLR0913
     _configure_logging(verbose)
 
     try:
-        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr)
+        _offset = None if offset == "auto" else int(offset)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=_offset)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc
@@ -150,6 +164,7 @@ def manifest(  # noqa: PLR0913
 @threshold
 @model_path
 @ltr_flag
+@offset_opt
 @click.option("--quality", "-q", "quality", type=click.IntRange(1, 100),
               default=100, show_default=True, help="JPEG quality for joined output.")
 @click.option("--output-dir", "output_dir", type=click.Path(path_type=Path), default=None, metavar="PATH",
@@ -164,6 +179,7 @@ def join(  # noqa: PLR0913
     threshold: float,
     model_path: str | None,
     ltr: bool,
+    offset: str,
     quality: int,
     output_dir: Path | None,
     dry_run: bool,
@@ -177,7 +193,8 @@ def join(  # noqa: PLR0913
     _configure_logging(verbose)
 
     try:
-        results = _detect(directory, threshold=threshold, model_path=model_path, ltr=ltr)
+        _offset = None if offset == "auto" else int(offset)
+        results = _detect(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=_offset)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc

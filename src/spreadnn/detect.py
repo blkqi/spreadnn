@@ -39,15 +39,14 @@ def detect_spreads(
     threshold: float = 0.5,
     model_path: str | Path | None = None,
     ltr: bool = False,
+    offset: int | None = None,
 ) -> list[tuple[int, int]]:
     """Detect spreads and return ``[(start, end), ...]`` tuples.
 
-    Alignment is auto-detected: starts at offset 1 (skipping the first
-    page), falls back to offset 0 if no spreads are found.  Misaligned
-    pairs reliably score below threshold, so a zero-spread result at the
-    wrong offset is a safe signal to retry.
+    *offset* can be *0* or *1* to force a specific parity, or *None* to
+    auto-detect (tries offset 1 first, falls back to 0).
     """
-    results = detect(directory, threshold=threshold, model_path=model_path, ltr=ltr)
+    results = detect(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=offset)
     return [
         (extract_page_num(Path(r.even)) or 0, extract_page_num(Path(r.odd)) or 0)
         for r in results
@@ -61,18 +60,21 @@ def detect(
     threshold: float = 0.5,
     model_path: str | Path | None = None,
     ltr: bool = False,
+    offset: int | None = None,
 ) -> list[DetectionResult]:
     """Analyse page images in *directory* and return results for every pair.
 
-    Alignment is auto-detected: starts at offset 1 (skipping the first
-    page, the common single-cover case), falls back to offset 0 if no
-    spreads are found.
+    *offset* can be *0* or *1* to force a specific parity, or *None* to
+    auto-detect (tries offset 1 first, falls back to 0).
     """
     images = _collect_images(Path(directory))
     if not images:
         raise ValueError(f"no supported images found in {directory}")
 
     model = SpreadModel(model_path)
+
+    if offset is not None:
+        return _detect_at_offset(directory, images, model, offset=offset, threshold=threshold, ltr=ltr)
 
     # Try offset 1 first (skip first page — most volumes have a single cover)
     results = _detect_at_offset(directory, images, model, offset=1, threshold=threshold, ltr=ltr)
