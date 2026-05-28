@@ -7,9 +7,9 @@ MobileNetV3-small binary classifier.  It operates on a flat directory of
 page images (pNNN files), outputs structured JSON, and optionally runs
 the ImageMagick join.
 
-Alignment is auto-detected: starts at offset 1 (skipping the first
-page, the common single-cover case), falls back to offset 0 if no
-spreads are found.
+Defaults to manga (right-to-left) reading order.  Pass ``--ltr`` for
+western/flopped pages.  Pair alignment is auto-detected (offset 1
+first, fallback to 0), or pin it with ``--offset {0,1}``.
 
 **Not** a CBZ in/out tool — it works on loose leaf images.
 
@@ -25,6 +25,8 @@ spreadnn join [OPTIONS] <DIR>
 |--------|---------|-------------|
 | `--threshold F` | 0.5 | Spread probability threshold [0–1]. |
 | `--model PATH` | bundled | Override model .pth file. |
+| `--ltr` | off | Left-to-right (western) reading order. |
+| `--offset {0,1,auto}` | auto | Force pair alignment offset. |
 
 ### `detect`
 
@@ -96,6 +98,9 @@ from spreadnn.detect import detect_spreads
 
 pairs = detect_spreads("./images/")
 # [(7, 8), (17, 18)]
+
+pairs = detect_spreads("./images/", ltr=True, offset=0)
+# western pages, offset 0 (no page skipped)
 ```
 
 ```python
