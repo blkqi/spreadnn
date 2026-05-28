@@ -21,21 +21,15 @@ spreadnn detect [OPTIONS] <DIR>
 spreadnn join [OPTIONS] <DIR>
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--threshold F` | 0.5 | Spread probability threshold [0–1]. |
-| `--model PATH` | bundled | Override model .pth file. |
-| `--ltr` | off | Left-to-right (western) reading order. |
-| `--offset {0,1,auto}` | auto | Force pair alignment offset. |
-
 ### `detect`
 
 Run ML detection on a directory of page images.  Outputs a JSON array of
-``[left, right]`` pairs to stdout.  For RTL (default) the pairs are
-``[even, odd]`` so joining left-to-right preserves narrative order::
+``[left, right]`` filename pairs to stdout.  For RTL (default) the
+pairs are ``[even, odd]`` so joining left-to-right preserves narrative
+order::
 
 ```json
-[[8, 7], [18, 17]]
+[["p008.jpg", "p007.jpg"]]
 ```
 
 Useful for piping into downstream tools (nmanga, cbtools):
@@ -54,6 +48,10 @@ spreadnn detect ./images/ --manifest
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--threshold F` | 0.5 | Spread probability threshold [0–1]. |
+| `--model PATH` | bundled | Override model .pth file. |
+| `--ltr` | off | Left-to-right (western) reading order. |
+| `--offset {0,1,auto}` | auto | Force pair alignment offset. |
 | `--manifest` | off | Write spreads.json sidecar instead of stdout. |
 | `--output PATH` | `<DIR>/spreads.json` | Manifest output path. |
 
