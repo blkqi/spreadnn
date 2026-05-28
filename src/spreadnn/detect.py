@@ -38,7 +38,7 @@ def detect_spreads(
     *,
     threshold: float = 0.5,
     model_path: str | Path | None = None,
-    ltr: bool = False,
+    reverse: bool = False,
     offset: int | None = None,
 ) -> list[tuple[str, str]]:
     """Detect spreads and return ``[(left_fn, right_fn), ...]``.
@@ -49,9 +49,9 @@ def detect_spreads(
     becomes ``(even_fn, odd_fn)`` after the reading-order swap so that
     a left-to-right scan gives correct narrative order.
     """
-    results = detect(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=offset)
+    results = detect(directory, threshold=threshold, model_path=model_path, reverse=reverse, offset=offset)
     pairs = [(r.even, r.odd) for r in results if r.merged]
-    if not ltr:
+    if not reverse:
         pairs = [(b, a) for a, b in pairs]
     return pairs
 
@@ -61,7 +61,7 @@ def detect(
     *,
     threshold: float = 0.5,
     model_path: str | Path | None = None,
-    ltr: bool = False,
+    reverse: bool = False,
     offset: int | None = None,
 ) -> list[DetectionResult]:
     """Analyse page images in *directory* and return results for every pair.
@@ -76,16 +76,16 @@ def detect(
     model = SpreadModel(model_path)
 
     if offset is not None:
-        return _detect_at_offset(directory, images, model, offset=offset, threshold=threshold, ltr=ltr)
+        return _detect_at_offset(directory, images, model, offset=offset, threshold=threshold, reverse=reverse)
 
     # Try offset 1 first (skip first page — most volumes have a single cover)
-    results = _detect_at_offset(directory, images, model, offset=1, threshold=threshold, ltr=ltr)
+    results = _detect_at_offset(directory, images, model, offset=1, threshold=threshold, reverse=reverse)
     if any(r.merged for r in results):
         log.info("alignment: offset 1 (first page skipped)")
         return results
 
     # Fall back to offset 0
-    results0 = _detect_at_offset(directory, images, model, offset=0, threshold=threshold, ltr=ltr)
+    results0 = _detect_at_offset(directory, images, model, offset=0, threshold=threshold, reverse=reverse)
     if any(r0.merged for r0 in results0):
         log.info("alignment: offset 0 (no pages skipped)")
         return results0
@@ -100,7 +100,7 @@ def _detect_at_offset(
     model: SpreadModel,
     offset: int,
     threshold: float,
-    ltr: bool = False,
+    reverse: bool = False,
 ) -> list[DetectionResult]:
     """Pair images starting at *offset* and score each pair."""
     interior = images[offset:]
@@ -122,7 +122,7 @@ def _detect_at_offset(
             log.warning("decode failure: %s / %s", name_e, name_o)
             continue
 
-        prob = model.score_pair(img_o, img_e) if ltr else model.score_pair(img_e, img_o)
+        prob = model.score_pair(img_o, img_e) if reverse else model.score_pair(img_e, img_o)
         merged = prob >= threshold
         results.append(DetectionResult(
             even=name_e, odd=name_o, score=round(prob, 4), merged=merged,

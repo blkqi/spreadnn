@@ -31,10 +31,10 @@ model_path = click.option(
     help="Override bundled model .pth file.",
 )
 
-ltr_flag = click.option(
-    "--ltr", "ltr",
+reverse_flag = click.option(
+    "--reverse", "reverse",
     is_flag=True, default=False,
-    help="Left-to-right reading order (western/flopped). Default is RTL (manga).",
+    help="Reverse to left-to-right reading order (western/flopped). Default is RTL (manga).",
 )
 
 offset_opt = click.option(
@@ -71,7 +71,7 @@ def cli() -> None:
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @threshold
 @model_path
-@ltr_flag
+@reverse_flag
 @offset_opt
 @click.option("--manifest", "-m", "manifest", is_flag=True, default=False,
               help="Write spreads.json sidecar instead of stdout.")
@@ -82,7 +82,7 @@ def detect(
     directory: Path,
     threshold: float,
     model_path: str | None,
-    ltr: bool,
+    reverse: bool,
     offset: str,
     manifest: bool,
     manifest_path: Path | None,
@@ -104,7 +104,7 @@ def detect(
 
     try:
         _offset = None if offset == "auto" else int(offset)
-        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, ltr=ltr, offset=_offset)
+        pairs = detect_spreads(directory, threshold=threshold, model_path=model_path, reverse=reverse, offset=_offset)
     except ValueError as exc:
         log.error("%s", exc)
         raise SystemExit(1) from exc

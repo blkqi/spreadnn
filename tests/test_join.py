@@ -30,8 +30,8 @@ class TestJoinPairs:
 
     @patch("spreadnn.join.cv2.imwrite", return_value=True)
     @patch("spreadnn.join.cv2.imread")
-    def test_output_filename_ltr(self, mock_imread, mock_imwrite, tmp_path: Path):
-        """Same result for LTR visual order."""
+    def test_output_filename_reverse(self, mock_imread, mock_imwrite, tmp_path: Path):
+        """Same result for reversed visual order."""
         _dummy_img(mock_imread)
         d = tmp_path / "images"
         d.mkdir()
@@ -162,8 +162,8 @@ class TestJoinWithManifest:
 
     @patch("spreadnn.join.cv2.imwrite", return_value=True)
     @patch("spreadnn.join.cv2.imread")
-    def test_manifest_ltr_visual_order(self, mock_imread, mock_imwrite, tmp_path: Path):
-        """Manifest with LTR visual order joins correctly."""
+    def test_manifest_reversed_visual_order(self, mock_imread, mock_imwrite, tmp_path: Path):
+        """Manifest with reversed visual order joins correctly."""
         from spreadnn.cli import join
         from click.testing import CliRunner
 
@@ -225,8 +225,8 @@ class TestJoinWithManifest:
         assert right.name == "p007.jpg", f"expected p007.jpg on right (RTL), got {right.name}"
 
     @patch("spreadnn.join.join_pair")
-    def test_manifest_ltr_odd_on_left(self, mock_join_pair, tmp_path: Path):
-        """LTR manifest puts odd page on left of joined output."""
+    def test_manifest_reversed_odd_on_left(self, mock_join_pair, tmp_path: Path):
+        """Reversed manifest puts odd page on left of joined output."""
         from spreadnn.cli import join
         from click.testing import CliRunner
 

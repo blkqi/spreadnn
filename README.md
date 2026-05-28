@@ -8,7 +8,7 @@ page images (pNNN files), detects spreads, and writes a manifest that
 downstream tools can use to mechanically join spreads without
 re-encoding the source images.
 
-Defaults to manga (right-to-left) reading order.  Pass ``--ltr`` for
+Defaults to manga (right-to-left) reading order.  Pass ``--reverse`` for
 western/flopped pages.  Pair alignment is auto-detected (offset 1
 first, fallback to 0), or pin it with ``--offset {0,1}``.
 
@@ -50,7 +50,7 @@ spreadnn detect ./images/ --manifest
 |--------|---------|-------------|
 | `--threshold F` | 0.5 | Spread probability threshold [0–1]. |
 | `--model PATH` | bundled | Override model .pth file. |
-| `--ltr` | off | Left-to-right (western) reading order. |
+| `--reverse` | off | Reverse to left-to-right (western) reading order. |
 | `--offset {0,1,auto}` | auto | Force pair alignment offset. |
 | `--manifest` | off | Write spreads.json sidecar instead of stdout. |
 | `--output PATH` | `<DIR>/spreads.json` | Manifest output path. |
@@ -82,8 +82,8 @@ spreadnn detect --manifest ./images/ && spreadnn join ./images/
 Each inner array is ``[left_filename, right_filename]`` in joined output
 order — the first file goes on the left side of the joined image, the
 second on the right.  For RTL (default) the pair is ``(even_fn, odd_fn)``
-so reading left-to-right gives correct narrative order; for LTR it is
-``(odd_fn, even_fn)``.
+so reading left-to-right gives correct narrative order; with ``--reverse``
+it is ``(odd_fn, even_fn)``.
 
 ## Naming Convention
 
@@ -99,8 +99,8 @@ from spreadnn.detect import detect_spreads
 pairs = detect_spreads("./images/")
 # [("p008.jpg", "p007.jpg")]   (RTL default — even on left)
 
-pairs = detect_spreads("./images/", ltr=True, offset=0)
-# [("p007.jpg", "p008.jpg")]   (LTR — odd on left)
+pairs = detect_spreads("./images/", reverse=True, offset=0)
+# [("p007.jpg", "p008.jpg")]   (reversed — odd on left)
 ```
 
 ```python

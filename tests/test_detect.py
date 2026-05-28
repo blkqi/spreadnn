@@ -27,11 +27,11 @@ class TestMergedPairs:
 
 
 class TestDetectParameters:
-    """detect() and detect_spreads() accept ltr and offset parameters."""
+    """detect() and detect_spreads() accept reverse and offset parameters."""
 
-    def test_accepts_ltr(self, sample_dir: Path):
+    def test_accepts_reverse(self, sample_dir: Path):
         from spreadnn.detect import detect
-        results = detect(sample_dir, ltr=True)
+        results = detect(sample_dir, reverse=True)
         assert isinstance(results, list)
         assert all(hasattr(r, "even") for r in results)
 
@@ -47,12 +47,12 @@ class TestDetectParameters:
 
     def test_accepts_both(self, sample_dir: Path):
         from spreadnn.detect import detect
-        results = detect(sample_dir, ltr=True, offset=0)
+        results = detect(sample_dir, reverse=True, offset=0)
         assert len(results) == 3
 
-    def test_spreads_accepts_ltr(self, sample_dir: Path):
+    def test_spreads_accepts_reverse(self, sample_dir: Path):
         from spreadnn.detect import detect_spreads
-        pairs = detect_spreads(sample_dir, ltr=True)
+        pairs = detect_spreads(sample_dir, reverse=True)
         assert isinstance(pairs, list)
         assert all(isinstance(p, tuple) and len(p) == 2 for p in pairs)
 
